@@ -1,0 +1,167 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ output extension=".cs" #>
+<#@ assembly name="System.Data" #>
+<#@ import namespace="System.Data.SqlClient" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#
+// Connection info
+ServerName = @"servername"; //insert server name
+DatabaseName = "database";  //insert name of the database to pull from
+
+// Example list of entities to create enums for
+//EnumEntities.Add(new Entity {Name="[Right]", TextColumn="AccessRight", ValueColumn="RightId", DescriptionColumn="AccessRight"});
+
+// Example list of entities to create flags for
+//FlagEntities.Add(new Entity {Name="[Right]", TextColumn="AccessRight", ValueColumn="RightId", DescriptionColumn="AccessRight"});
+#>
+using System;
+using System.ComponentModel;
+
+namespace enums //namespace the enums will live in
+{
+<#
+foreach(var entity in EnumEntities)
+{
+#>
+
+	public enum <#= ParseEntityField(entity.Name) #>Enum
+	{
+<#CreateEnum(entity);#>
+	}
+
+<#
+}
+#>
+<#
+foreach(var entity in FlagEntities)
+{
+#>
+	[Flags]
+	public enum <#= ParseEntityField(entity.Name) #>Flag
+	{
+<#CreateFlag(entity);#>
+	}
+
+<#
+}
+#>
+}
+<#+
+private string ServerName;
+private string DatabaseName;
+ 
+private struct Entity {
+	public string Name;
+	public string TextColumn;
+	public string ValueColumn;
+	public string DescriptionColumn;
+}
+ 
+private List<Entity> EnumEntities = new List<Entity>();
+private List<Entity> FlagEntities = new List<Entity>();
+ 
+private string CreateConnectionString()
+{
+	var sb = new SqlConnectionStringBuilder();
+	sb.DataSource = ServerName;
+	sb.InitialCatalog = DatabaseName;
+	sb.IntegratedSecurity = true;
+ 
+	return sb.ConnectionString;
+}
+ 
+private string ParseEntityField(string name)
+{
+	// Remove the dot, left bracket, right bracket, space,
+	// back slash, colon, and frot slash characters from the naem.
+	var pattern = @"[\s\[\]\.\\:/]";
+	
+	return Regex.Replace(name, pattern, string.Empty, RegexOptions.Multiline);
+}
+ 
+private void CreateEnum(Entity e)
+{   
+	using(var con = new SqlConnection(CreateConnectionString()))
+	{
+		var cmd = con.CreateCommand();
+		var sql = e.TextColumn != null
+			? string.Format("SELECT {0}, {1} FROM {2} ORDER BY {1}", e.TextColumn, e.ValueColumn, e.Name)
+			: string.Format("SELECT {0} FROM {1} ORDER BY {0}", e.ValueColumn, e.Name);
+		cmd.CommandText = sql;
+		con.Open();
+		
+		
+		using(var rdr = cmd.ExecuteReader())
+		{
+			PushIndent("\t");
+			PushIndent("\t");
+			while (rdr.Read())
+			{
+				if(e.DescriptionColumn != null)
+				{
+					string descriptionvalue = rdr[e.DescriptionColumn].ToString();
+					var description = string.Format("[Description(\"{0}\")]", descriptionvalue);
+					WriteLine(description);
+				}
+				if (e.TextColumn != null)
+				{
+					int value = (int)rdr[e.ValueColumn];
+					string name = ParseEntityField(rdr[e.TextColumn].ToString());
+					var option = string.Format("{0} = {1},", name, value.ToString());
+					WriteLine(option);
+				}
+				else
+				{
+					string value = ParseEntityField(rdr[e.ValueColumn].ToString());
+					var option = string.Format("{0},", value.ToString());
+					WriteLine(option);
+				}
+			}
+			PopIndent();
+			PopIndent();
+		}
+	}
+}
+
+private void CreateFlag(Entity e)
+{   
+	using(var con = new SqlConnection(CreateConnectionString()))
+	{
+		var cmd = con.CreateCommand();
+		var sql = string.Format("SELECT {0}, {1} FROM {2} ORDER BY {1}", e.TextColumn, e.ValueColumn, e.Name);
+		cmd.CommandText = sql;
+		con.Open();
+		
+		
+		using(var rdr = cmd.ExecuteReader())
+		{
+			PushIndent("\t");
+			PushIndent("\t");
+			WriteLine("[Description(\"No Flags Set\")]");
+			WriteLine("None = 0,");
+			while (rdr.Read())
+			{
+				if(e.DescriptionColumn != null)
+				{
+					string descriptionvalue = rdr[e.DescriptionColumn].ToString();
+					var description = string.Format("[Description(\"{0}\")]", descriptionvalue);
+					WriteLine(description);
+				}
+				int value = (int)rdr[e.ValueColumn];
+				string name = ParseEntityField(rdr[e.TextColumn].ToString());
+				string option = string.Empty;
+				if(value >= 0)
+				{
+					option = string.Format("{0} = 1 << {1},", name, value.ToString());
+				}
+				WriteLine(option);
+			}
+			WriteLine("[Description(\"All Flags Set\")]");
+			WriteLine("All = ~0,");
+			PopIndent();
+			PopIndent();
+		}
+	}
+}
+#>

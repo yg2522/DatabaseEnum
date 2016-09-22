@@ -106,7 +106,18 @@ private void CreateEnum(Entity e)
 				}
 				if (e.TextColumn != null)
 				{
-					int value = (int)rdr[e.ValueColumn];
+					var rawValue = rdr[e.ValueColumn];
+					int value = 0;
+					if(rawValue is int)
+					{
+						value = (int)rawValue;
+					}
+
+					if(rawValue is byte)
+					{
+						byte byteValue = (byte)rawValue;
+						value = Convert.ToInt32(byteValue);
+					}
 					string name = ParseEntityField(rdr[e.TextColumn].ToString());
 					var option = string.Format("{0} = {1},", name, value.ToString());
 					WriteLine(option);
@@ -148,7 +159,18 @@ private void CreateFlag(Entity e)
 					var description = string.Format("[Description(\"{0}\")]", descriptionvalue);
 					WriteLine(description);
 				}
-				int value = (int)rdr[e.ValueColumn];
+				var rawValue = rdr[e.ValueColumn];
+				int value = 0;
+				if(rawValue is int)
+				{
+					value = (int)rawValue;
+				}
+
+				if(rawValue is byte)
+				{
+					byte byteValue = (byte)rawValue;
+					value = Convert.ToInt32(byteValue);
+				}
 				string name = ParseEntityField(rdr[e.TextColumn].ToString());
 				string option = string.Empty;
 				if(value >= 0)

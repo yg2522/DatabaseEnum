@@ -10,22 +10,22 @@ ServerName = @"servername"; //insert server name
 DatabaseName = "database";  //insert name of the database to pull from
 
 // Example list of entities to create enums for
-//EnumEntities.Add(new Entity {Name="[Right]", TextColumn="AccessRight", ValueColumn="RightId", DescriptionColumn="AccessRight"});
+EnumEntities.Add(new Entity { EnumName="Test", TableName="Table", TextColumn="Text", ValueColumn="TableId"});
 
 // Example list of entities to create flags for
-//FlagEntities.Add(new Entity {Name="[Right]", TextColumn="AccessRight", ValueColumn="RightId", DescriptionColumn="AccessRight"});
+//FlagEntities.Add(new Entity {TableName="[Right]", TextColumn="AccessRight", ValueColumn="RightId", DescriptionColumn="AccessRight"});
 #>
 using System;
 using System.ComponentModel;
 
-namespace enums //namespace the enums will live in
+namespace LMCU.OnlineBanking.Core.ENUMS //namespace the enums will live in
 {
 <#
 foreach(var entity in EnumEntities)
 {
 #>
 
-	public enum <#= ParseEntityField(entity.Name) #>Enum
+	public enum <#= entity.EnumName ?? ParseEntityField(entity.TableName) #>Enum
 	{
 <#CreateEnum(entity);#>
 	}
@@ -38,7 +38,7 @@ foreach(var entity in FlagEntities)
 {
 #>
 	[Flags]
-	public enum <#= ParseEntityField(entity.Name) #>Flag
+	public enum <#= entity.EnumName ?? ParseEntityField(entity.TableName) #>Flag
 	{
 <#CreateFlag(entity);#>
 	}
@@ -52,7 +52,8 @@ private string ServerName;
 private string DatabaseName;
  
 private struct Entity {
-	public string Name;
+	public string EnumName;
+	public string TableName;
 	public string TextColumn;
 	public string ValueColumn;
 	public string DescriptionColumn;
@@ -86,8 +87,8 @@ private void CreateEnum(Entity e)
 	{
 		var cmd = con.CreateCommand();
 		var sql = e.TextColumn != null
-			? string.Format("SELECT {0}, {1} FROM {2} ORDER BY {1}", e.TextColumn, e.ValueColumn, e.Name)
-			: string.Format("SELECT {0} FROM {1} ORDER BY {0}", e.ValueColumn, e.Name);
+			? string.Format("SELECT {0}, {1} FROM {2} ORDER BY {1}", e.TextColumn, e.ValueColumn, e.TableName)
+			: string.Format("SELECT {0} FROM {1} ORDER BY {0}", e.ValueColumn, e.TableName);
 		cmd.CommandText = sql;
 		con.Open();
 		
@@ -140,7 +141,9 @@ private void CreateFlag(Entity e)
 	using(var con = new SqlConnection(CreateConnectionString()))
 	{
 		var cmd = con.CreateCommand();
-		var sql = string.Format("SELECT {0}, {1} FROM {2} ORDER BY {1}", e.TextColumn, e.ValueColumn, e.Name);
+		var sql = e.TextColumn != null
+			? string.Format("SELECT {0}, {1} FROM {2} ORDER BY {1}", e.TextColumn, e.ValueColumn, e.TableName)
+			: string.Format("SELECT {0} FROM {1} ORDER BY {0}", e.ValueColumn, e.TableName);
 		cmd.CommandText = sql;
 		con.Open();
 		

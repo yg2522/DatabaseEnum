@@ -18,7 +18,7 @@ EnumEntities.Add(new Entity { EnumName="Test", TableName="Table", TextColumn="Te
 using System;
 using System.ComponentModel;
 
-namespace LMCU.OnlineBanking.Core.ENUMS //namespace the enums will live in
+namespace Namespace.For.Enums //namespace the enums will live in
 {
 <#
 foreach(var entity in EnumEntities)
@@ -86,9 +86,9 @@ private void CreateEnum(Entity e)
 	using(var con = new SqlConnection(CreateConnectionString()))
 	{
 		var cmd = con.CreateCommand();
-		var sql = e.TextColumn != null
-			? string.Format("SELECT {0}, {1} FROM {2} ORDER BY {1}", e.TextColumn, e.ValueColumn, e.TableName)
-			: string.Format("SELECT {0} FROM {1} ORDER BY {0}", e.ValueColumn, e.TableName);
+		var sql = e.DescriptionColumn != null
+			? string.Format("SELECT {0}, {1}, {2} FROM {3} ORDER BY {0}", e.ValueColumn, e.TextColumn, e.DescriptionColumn, e.TableName)
+			: string.Format("SELECT {0}, {1} FROM {2} ORDER BY {0}", e.ValueColumn, e.TextColumn, e.TableName);
 		cmd.CommandText = sql;
 		con.Open();
 		
@@ -99,11 +99,14 @@ private void CreateEnum(Entity e)
 			PushIndent("\t");
 			while (rdr.Read())
 			{
-				if(e.DescriptionColumn != null)
+				if (e.DescriptionColumn != null)
 				{
 					string descriptionvalue = rdr[e.DescriptionColumn].ToString();
-					var description = string.Format("[Description(\"{0}\")]", descriptionvalue);
-					WriteLine(description);
+					if(!string.IsNullOrWhiteSpace(descriptionvalue))
+					{
+						var description = string.Format("[Description(\"{0}\")]", descriptionvalue);
+						WriteLine(description);
+					}
 				}
 				if (e.TextColumn != null)
 				{
@@ -141,9 +144,9 @@ private void CreateFlag(Entity e)
 	using(var con = new SqlConnection(CreateConnectionString()))
 	{
 		var cmd = con.CreateCommand();
-		var sql = e.TextColumn != null
-			? string.Format("SELECT {0}, {1} FROM {2} ORDER BY {1}", e.TextColumn, e.ValueColumn, e.TableName)
-			: string.Format("SELECT {0} FROM {1} ORDER BY {0}", e.ValueColumn, e.TableName);
+		var sql = e.DescriptionColumn != null
+			? string.Format("SELECT {0}, {1}, {2} FROM {3} ORDER BY {0}", e.ValueColumn, e.TextColumn, e.DescriptionColumn, e.TableName)
+			: string.Format("SELECT {0}, {1} FROM {2} ORDER BY {0}", e.ValueColumn, e.TextColumn, e.TableName);
 		cmd.CommandText = sql;
 		con.Open();
 		
@@ -159,8 +162,11 @@ private void CreateFlag(Entity e)
 				if(e.DescriptionColumn != null)
 				{
 					string descriptionvalue = rdr[e.DescriptionColumn].ToString();
-					var description = string.Format("[Description(\"{0}\")]", descriptionvalue);
-					WriteLine(description);
+					if(!string.IsNullOrWhiteSpace(descriptionvalue))
+					{
+						var description = string.Format("[Description(\"{0}\")]", descriptionvalue);
+						WriteLine(description);
+					}
 				}
 				var rawValue = rdr[e.ValueColumn];
 				int value = 0;
